@@ -12,10 +12,13 @@ namespace Richter.Domain;
 /// </remarks>
 public class World
 {
-    public World(StarSystem starSystem, DateTimeOffset time)
+    /// <param name="starSystem"> The bodies the game takes place among. </param>
+    /// <param name="deviceKinds"> Every kind of device there can be. </param>
+    /// <param name="time"> The instant the game starts at. </param>
+    public World(StarSystem starSystem, IEnumerable<DeviceKind> deviceKinds, DateTimeOffset time)
     {
         StarSystem = starSystem;
-        Networks = new NetworkGraph(starSystem);
+        Networks = new NetworkGraph(starSystem, deviceKinds);
         Time = time;
     }
 

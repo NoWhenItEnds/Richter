@@ -53,7 +53,7 @@ project or folder before creating a new one, and record a new one in `docs/archi
 ## Architecture doc
 
 Every repo has `docs/architecture.md`. It is the first thing a reviewer or Claude reads:
-`CLAUDE.md` imports it and the README links to it. In about 100 lines it covers:
+`CLAUDE.md` imports it and the README links to it. In about 200 lines it covers:
 
 - what the repo owns, and what it only mirrors from elsewhere;
 - a Mermaid diagram of the components and the systems around them;

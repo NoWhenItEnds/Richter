@@ -1,0 +1,11 @@
+// The kinds of device there can be. A device's "kind" is one of these ids. "components" lists
+// what devices of the kind can do, with their starting settings, which a device in a scenario
+// can change. A network's gateway is of kind "gateway" unless its scenario says otherwise.
+{
+  "kinds": [
+    { "id": "gateway", "name": "Gateway" },
+    { "id": "workstation", "name": "Workstation" },
+    { "id": "camera", "name": "Camera" },
+    { "id": "door", "name": "Door", "components": { "lock": { "locked": true } } }
+  ]
+}

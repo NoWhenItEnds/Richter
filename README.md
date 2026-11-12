@@ -26,21 +26,22 @@ dotnet run --project Richter
 | Space | Pause or resume time |
 | `+`, `-` | Run time faster or slower, from ×1 to ×1,000,000 |
 
-## Game data
+## Game data and mods
 
-The game reads its content at start-up from `Richter/Data/`, copied next to the executable. The
-files are meant to be edited by hand. If one is missing or invalid, the game says what's wrong
-and exits.
+All of the game's content comes from mods in `Mods/`, next to the executable, and its own
+content is the mod `core`, in `Richter/Mods/core/`. Another mod can add to it or replace parts of
+it without code; [modding.md](docs/modding.md) explains how. The files are meant to be edited by
+hand. If one is missing or invalid, the game says which file and entry, and exits.
 
-- `scenario.json`: how a game begins. `startTime` is an ISO 8601 date and time such as
-  `2112-01-01T00:00:00Z`; one without an offset is UTC. `networks` places networks on bodies,
-  named by their id in `solar-system.json`, or in orbit, with their devices, and `links` joins
-  them by cable, radio or laser. The file's comments explain each part.
-- `solar-system.json`: the Sun, planets and Moon, from published values. Its comments give the
-  units and sources. Each body has an `id`, such as `earth`, that orbits and scenarios use to
-  refer to it.
-- `Shaders/`: the GLSL shaders that draw the map, compiled when the game starts.
-- `Fonts/`: the label font, Liberation Sans, under the SIL Open Font Licence in the file beside
+`core` holds:
+
+- `scenarios/default.json`: how a game begins: its star system, its start time, and the
+  networks, devices and links in place. The file's comments explain each part.
+- `star-systems/solar-system.json`: the Sun, planets and Moon, from published values. Its
+  comments give the units and sources.
+- `device-kinds.json`: the kinds of device there can be, such as doors, and what they can do.
+- `shaders/`: the GLSL shaders that draw the map, compiled when the game starts.
+- `fonts/`: the label font, Liberation Sans, under the SIL Open Font Licence in the file beside
   it.
 
 ## Testing
@@ -49,7 +50,18 @@ and exits.
 dotnet test
 ```
 
+## Committing
+
+A pre-commit hook runs the checks from the [.NET standards](docs/dotnet-standards.md): a build
+with warnings as errors, the style and whitespace checks, and the tests. Turn it on once in each
+clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Docs
 
 - [Architecture](docs/architecture.md)
+- [Modding](docs/modding.md)
 - [.NET standards](docs/dotnet-standards.md)

@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Game content, read at start-up from next to the executable. -->
-    <None Update="Data\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The game's own content, the mod core, read at start-up from next to the executable. -->
+    <None Update="Mods\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

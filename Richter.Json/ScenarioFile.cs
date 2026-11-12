@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Richter.Domain;
 using Richter.Domain.Astronomy;
 using Richter.Domain.Networking;
@@ -7,68 +6,62 @@ using Richter.Json.Documents;
 namespace Richter.Json;
 
 /// <summary>
-/// Reads a scenario file such as <c>Data/scenario.json</c>, and starts a <see cref="World"/> from
-/// it: its start time, and the networks, devices and links in place when play begins.
+/// Starts a <see cref="World"/> from every mod's copy of a scenario: its start time, and the
+/// networks, devices and links in place when play begins.
 /// </summary>
 /// <remarks>
 /// Everything goes in through <see cref="NetworkGraph"/>, so a scenario meets the same rules as
-/// play, and a broken rule is reported with where it is in the file.
+/// play, and a broken rule is reported with the file and entry it came from.
 /// </remarks>
-public static class ScenarioFile
+internal static class ScenarioFile
 {
+    /// <summary> The kind of device a network's gateway is when its file doesn't say. </summary>
+    internal const String DefaultGatewayKind = "gateway";
+
     /// <summary>
-    /// Reads a scenario and starts a world in <paramref name="starSystem"/>. Throws
+    /// Merges the files and starts a world in <paramref name="starSystem"/>. Throws
     /// <see cref="InvalidDataException"/>, with a message a player or modder can act on, if the
-    /// file isn't a valid scenario.
+    /// result isn't a valid scenario.
     /// </summary>
-    public static async Task<World> ReadAsync(Stream stream, StarSystem starSystem, CancellationToken cancellationToken)
+    /// <param name="files"> Every mod's copy, in load order. </param>
+    /// <param name="path"> The path inside a mod, such as <c>scenarios/default.json</c>, for errors. </param>
+    /// <param name="starSystem"> The star system the scenario names. </param>
+    /// <param name="deviceKinds"> Every kind of device there can be. </param>
+    internal static World Build(IReadOnlyList<FromFile<ScenarioDocument>> files, String path, StarSystem starSystem, IReadOnlyList<DeviceKind> deviceKinds)
     {
-        ScenarioDocument? document;
-
-        try
-        {
-            document = await JsonSerializer.DeserializeAsync(stream, ContentJsonContext.Default.ScenarioDocument, cancellationToken);
-        }
-        catch (JsonException exception)
-        {
-            throw ContentErrors.From(exception);
-        }
-
-        if (document is null)
-        {
-            throw new InvalidDataException("The file holds null instead of a scenario.");
-        }
-
-        DateTimeOffset startTime = InstantText.Parse(document.StartTime, "startTime");
-        World world = new World(starSystem, startTime);
+        FromFile<String> startTimeText = ContentMerge.Last(files, file => file.StartTime)
+            ?? throw new InvalidDataException($"No mod's {path} sets startTime.");
+        DateTimeOffset startTime = InstantText.Parse(startTimeText.Value, $"{startTimeText.File}: startTime");
+        World world = new World(starSystem, deviceKinds, startTime);
         Dictionary<String, Double> gravitationalParameters = starSystem.Bodies.ToDictionary(body => body.Id.Key, body => body.GravitationalParameter);
+        Dictionary<String, DeviceKind> kinds = deviceKinds.ToDictionary(kind => kind.Id.Key);
         Dictionary<String, NetworkId> networkIds = new Dictionary<String, NetworkId>();
 
-        foreach ((Int32 index, NetworkDocument network) in (document.Networks ?? []).Index())
+        foreach (FromFile<NetworkDocument> network in ContentMerge.ById(files, file => file.Networks, network => network.Id, "networks"))
         {
-            String where = $"networks[{index}] ({network.Name})";
-
-            if (networkIds.ContainsKey(network.Id))
-            {
-                throw new InvalidDataException($"{where}: another network already has the id \"{network.Id}\".");
-            }
-
-            networkIds.Add(network.Id, world.Networks.NewNetworkId());
-            AddNetwork(world.Networks, network, networkIds[network.Id], where, startTime, gravitationalParameters);
+            NetworkId id = world.Networks.NewNetworkId();
+            networkIds.Add(network.Value.Id, id);
+            AddNetwork(world.Networks, network.Value, id, $"{network.File}, network \"{network.Value.Id}\"", startTime, gravitationalParameters, kinds);
         }
 
-        foreach ((Int32 index, LinkDocument link) in (document.Links ?? []).Index())
+        foreach (FromFile<LinkDocument> link in ContentMerge.ById(files, file => file.Links, link => link.Id, "links"))
         {
-            AddLink(world.Networks, link, $"links[{index}]", networkIds);
+            AddLink(world.Networks, link.Value, $"{link.File}, link \"{link.Value.Id}\"", networkIds);
         }
 
         return world;
     }
 
-    private static void AddNetwork(NetworkGraph graph, NetworkDocument document, NetworkId id, String where, DateTimeOffset startTime, Dictionary<String, Double> gravitationalParameters)
+    private static void AddNetwork(
+        NetworkGraph graph,
+        NetworkDocument document,
+        NetworkId id,
+        String where,
+        DateTimeOffset startTime,
+        Dictionary<String, Double> gravitationalParameters,
+        Dictionary<String, DeviceKind> kinds)
     {
-        // The domain checks every value and rule; this puts the network's place in the file on
-        // what it finds.
+        // The domain checks every value and rule; this puts the network's place on what it finds.
         try
         {
             Location location = (document.Surface, document.Orbit) switch
@@ -83,14 +76,15 @@ public static class ScenarioFile
                 (null, OrbitDocument orbit) => new OrbitalLocation { Orbit = OrbitConversion.ToOrbit(orbit, where, startTime, gravitationalParameters) },
                 _ => throw new InvalidDataException($"{where}: a network needs either a surface or an orbit, not both or neither."),
             };
+            DeviceDocument gateway = document.Gateway ?? new DeviceDocument { Kind = DefaultGatewayKind, Name = $"{document.Name} gateway" };
 
             graph.AddNetwork(
-                new Network { Id = id, Name = document.Name, Location = location },
-                new Gateway { Id = graph.NewDeviceId(), Name = document.Gateway ?? $"{document.Name} gateway", Network = id });
+                new Network { Id = id, Key = document.Id, Name = document.Name, Location = location },
+                ToDevice(gateway, graph.NewDeviceId(), id, kinds, $"{where}, gateway"));
 
             foreach ((Int32 index, DeviceDocument device) in (document.Devices ?? []).Index())
             {
-                graph.AddDevice(ToDevice(device, graph.NewDeviceId(), id, $"{where}.devices[{index}] ({device.Name})"));
+                graph.AddDevice(ToDevice(device, graph.NewDeviceId(), id, kinds, $"{where}, devices[{index}] ({device.Name})"));
             }
         }
         catch (ArgumentException exception)
@@ -99,27 +93,27 @@ public static class ScenarioFile
         }
     }
 
-    private static Device ToDevice(DeviceDocument document, DeviceId id, NetworkId network, String where)
+    private static Device ToDevice(DeviceDocument document, DeviceId id, NetworkId network, Dictionary<String, DeviceKind> kinds, String where)
     {
-        if (document.Kind != "door" && document.Locked is not null)
+        if (!kinds.TryGetValue(document.Kind, out DeviceKind? kind))
         {
-            throw new InvalidDataException($"{where}: only a door can be locked.");
+            throw new InvalidDataException($"{where}: there's no device kind \"{document.Kind}\".");
         }
 
-        Device device = document.Kind switch
+        LockDocument? lockSettings = document.Components?.Lock;
+
+        if (lockSettings is not null && kind.Lock is null)
         {
-            "workstation" => new Workstation { Id = id, Name = document.Name, Network = network },
-            "camera" => new Camera { Id = id, Name = document.Name, Network = network },
-            "door" => new Door
-            {
-                Id = id,
-                Name = document.Name,
-                Network = network,
-                Locked = document.Locked ?? throw new InvalidDataException($"{where}: a door needs \"locked\": true or false."),
-            },
-            _ => throw new InvalidDataException($"{where}: kind is \"{document.Kind}\", but must be \"workstation\", \"camera\" or \"door\"."),
-        };
-        device.Powered = document.Powered ?? true;
+            throw new InvalidDataException($"{where}: devices of kind \"{kind.Id.Key}\" have no lock.");
+        }
+
+        Device device = new Device(id, kind, document.Name, network) { Powered = document.Powered ?? true };
+
+        // A device's own settings replace the ones its kind starts it with.
+        if (device.Lock is not null && lockSettings?.Locked is Boolean locked)
+        {
+            device.Lock.Locked = locked;
+        }
 
         return device;
     }
@@ -144,7 +138,7 @@ public static class ScenarioFile
 
         try
         {
-            graph.AddLink(new Link { Id = graph.NewLinkId(), NetworkA = ends[0], NetworkB = ends[1], Medium = medium });
+            graph.AddLink(new Link { Id = graph.NewLinkId(), Key = document.Id, NetworkA = ends[0], NetworkB = ends[1], Medium = medium });
         }
         catch (ArgumentException exception)
         {

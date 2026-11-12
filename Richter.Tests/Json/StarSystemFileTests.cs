@@ -1,6 +1,7 @@
 using System.Globalization;
 using Richter.Domain.Astronomy;
 using Richter.Json;
+using Richter.Json.Documents;
 
 namespace Richter.Tests.Json;
 
@@ -108,8 +109,13 @@ public class StarSystemFileTests
     {
         await using Stream stream = typeof(StarSystemFileTests).Assembly.GetManifestResourceStream("solar-system.json")
             ?? throw new InvalidOperationException("The test project should embed solar-system.json.");
+        FromFile<StarSystemDocument> file = await ContentFile.ReadAsync(
+            stream,
+            "Mods/core/star-systems/solar-system.json",
+            ContentJsonContext.Default.StarSystemDocument,
+            TestContext.Current.CancellationToken);
 
-        return await StarSystemFile.ReadAsync(stream, TestContext.Current.CancellationToken);
+        return StarSystemFile.Build([file], "star-systems/solar-system.json");
     }
 
     private static DateTimeOffset Parse(String time)

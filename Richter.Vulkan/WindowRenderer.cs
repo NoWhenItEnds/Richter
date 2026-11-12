@@ -128,9 +128,9 @@ public unsafe class WindowRenderer : IDisposable
     }
 
     /// <summary>
-    /// The GLSL files in the game's <c>Data/Shaders</c> that the layers draw with. The caller
-    /// compiles them before creating a renderer, so a broken one is reported before any window
-    /// opens.
+    /// The GLSL files the layers draw with, in the <c>shaders</c> folder of the game's mods. The
+    /// caller compiles them before creating a renderer, so a broken one is reported before any
+    /// window opens.
     /// </summary>
     public static IReadOnlyList<String> ShaderFiles { get; } =
     [

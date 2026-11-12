@@ -16,12 +16,12 @@ internal static class InstantText
     /// machine.
     /// </summary>
     /// <param name="text"> The value as written. </param>
-    /// <param name="property"> The property it came from, for the error message. </param>
-    internal static DateTimeOffset Parse(String text, String property)
+    /// <param name="where"> The file and property it came from, which the error message starts with. </param>
+    internal static DateTimeOffset Parse(String text, String where)
     {
         if (!DateTimeOffset.TryParseExact(text, Formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset instant))
         {
-            throw new InvalidDataException($"{property} \"{text}\" isn't an ISO 8601 date and time, such as 2112-01-01T00:00:00Z.");
+            throw new InvalidDataException($"{where} \"{text}\" isn't an ISO 8601 date and time, such as 2112-01-01T00:00:00Z.");
         }
 
         return instant;

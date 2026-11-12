@@ -15,6 +15,8 @@ namespace Richter.Json;
     AllowTrailingCommas = true,
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     RespectNullableAnnotations = true)]
+[JsonSerializable(typeof(DeviceKindsDocument))]
+[JsonSerializable(typeof(ModDocument))]
 [JsonSerializable(typeof(ScenarioDocument))]
 [JsonSerializable(typeof(StarSystemDocument))]
 internal partial class ContentJsonContext : JsonSerializerContext

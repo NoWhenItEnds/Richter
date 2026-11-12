@@ -3,6 +3,9 @@ namespace Richter.Json.Documents;
 /// <summary> A link between two networks in a scenario file. </summary>
 internal record LinkDocument
 {
+    /// <summary> Unique in the scenario; later mods replace the link by it. </summary>
+    public required String Id { get; init; }
+
     /// <summary> The <see cref="NetworkDocument.Id"/>s of the two networks it joins. </summary>
     public required IReadOnlyList<String> Between { get; init; }
 

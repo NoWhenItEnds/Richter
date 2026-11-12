@@ -14,10 +14,12 @@ namespace Richter.Json;
 /// </remarks>
 internal static partial class ContentErrors
 {
-    internal static InvalidDataException From(JsonException exception)
+    /// <param name="exception"> What the reader threw. </param>
+    /// <param name="file"> The file's path under the game's directory, which the message starts with. </param>
+    internal static InvalidDataException From(JsonException exception, String file)
     {
         String path = exception.Path is null or "$" ? "" : exception.Path.TrimStart('$', '.');
-        String where = exception.LineNumber is Int64 line ? $"Line {line + 1}" : "The file";
+        String where = exception.LineNumber is Int64 line ? $"{file}, line {line + 1}" : file;
 
         if (path.Length > 0)
         {

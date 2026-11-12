@@ -5,10 +5,10 @@ uses GLFW for windows and input, and Vulkan for rendering. Richter owns all of i
 is no server, database or other system it mirrors. `Richter.Domain` holds the game model: a
 `World` with its star system, the networks placed in it, and the clock. It works out where every
 body and location is at any instant, whether two locations can see each other, whether each link
-is up and how slow it is, and the fastest route between networks. The game reads its content
-from hand-editable files in `Data/`, including the networks and links a game starts with, runs
-the clock in real time, and draws a labelled top-down map of the star system and its networks.
-Nothing is saved yet.
+is up and how slow it is, and the fastest route between networks. The game reads all of its
+content from mods, hand-editable files in `Mods/`; its own content is the mod `core`, so a mod
+can change anything it sets up. It runs the clock in real time and draws a labelled top-down map
+of the star system and its networks. Nothing is saved yet.
 
 ```mermaid
 flowchart LR
@@ -16,15 +16,15 @@ flowchart LR
         host["Richter<br/>Program, SystemMap, TimeControls"]
         vulkan["Richter.Vulkan<br/>WindowRenderer, layers, ShaderCompiler, MapFont"]
         domain["Richter.Domain<br/>World, Astronomy, Networking"]
-        json["Richter.Json<br/>ScenarioFile, StarSystemFile"]
+        json["Richter.Json<br/>ModList, GameContent"]
     end
     host -->|"MapScene"| vulkan
     host --> domain
     host --> json
     json --> domain
-    json -->|"System.Text.Json"| data["Data/*.json"]
-    vulkan -->|"ShaderC"| shaders["Data/Shaders/*.vert, *.frag"]
-    vulkan -->|"FreeType"| fonts["Data/Fonts/*.ttf"]
+    json -->|"System.Text.Json"| data["Mods/*/*.json"]
+    vulkan -->|"ShaderC"| shaders["Mods/*/shaders/*.vert, *.frag"]
+    vulkan -->|"FreeType"| fonts["Mods/*/fonts/*.ttf"]
     host -->|"GLFW: window, input"| ws["Window system<br/>Wayland, X11, Win32, Cocoa"]
     vulkan -->|"Vulkan: draw, present"| gpu["Vulkan loader<br/>and GPU driver"]
     gpu --> ws
@@ -38,7 +38,7 @@ flowchart LR
 | `SystemMap` | `Richter/` | The map view: focus (Tab, Shift+Tab) and zoom (scroll), and the `MapScene` for each frame. |
 | `TimeControls` | `Richter/` | Space pauses, + and - step the time scale from ×1 to ×1,000,000. |
 | `GlfwSurfaceSource` | `Richter/` | `IVulkanSurfaceSource` over a GLFW window. Also points GLFW at Brutal's Vulkan loader. |
-| Game data | `Richter/Data/` | Hand-written content copied next to the executable: `scenario.json` (start time, networks, devices, links), `solar-system.json`, the GLSL in `Shaders/`, and the label font with its licence in `Fonts/`. |
+| `core` mod | `Richter/Mods/core/` | The game's own content, copied next to the executable: `mod.json`, `device-kinds.json`, `scenarios/default.json` (star system, start time, networks, devices, links), `star-systems/solar-system.json`, the GLSL in `shaders/`, and the label font with its licence in `fonts/`. [modding.md](modding.md) specifies the format. |
 | `WindowRenderer` | `Richter.Vulkan/` | Owns the Vulkan instance, device, VMA allocator, `Swapchain` and the layers, and draws a `MapScene` each frame. `ShaderFiles` lists the shaders the layers need. |
 | `LineLayer`, `DiscLayer`, `TextLayer` | `Richter.Vulkan/` | The `IMapLayer`s, drawn in that order. Each owns its pipeline, its buffers and the names of its two shaders; `TextLayer` also owns the font atlas. `LayerPipeline` builds their pipelines. |
 | `MapScene` | `Richter.Vulkan/` | One frame's lines, discs and labels, in pixels from the window's centre. |
@@ -47,8 +47,9 @@ flowchart LR
 | `IVulkanSurfaceSource` | `Richter.Vulkan/` | The only view the renderer has of the window: extensions, size, surface creation. |
 | `World` | `Richter.Domain/` | The root of game state: the star system, the network graph, the time and the time scale. |
 | Astronomy | `Richter.Domain/Astronomy/` | `StarSystem` of `CelestialBody`s with their `Orbit` and `Rotation`, and `Location`s on or around them. `StarSystem` gives positions (`Vector3D`, metres), orbit paths and line of sight. `IauRotation` converts published spin elements. |
-| Networking | `Richter.Domain/Networking/` | `NetworkGraph` owns every `Network`, `Device` (one `Gateway` per network) and `Link`. `DelayOf` says whether a link is up and how slow it is; `FindRoute` gives the fastest `Route`. |
-| `StarSystemFile`, `ScenarioFile` | `Richter.Json/` | Read content files into the domain: the star system, then a `World` in it with the scenario's networks, devices and links. The records in `Documents/` are the file formats; `ContentErrors` words errors for players and modders. |
+| Networking | `Richter.Domain/Networking/` | `NetworkGraph` owns every `Network`, `Device` (one per network is its gateway) and `Link`, and knows the `DeviceKind`s. A kind's components, such as `LockDefinition`, become the device's, such as `DeviceLock`. `DelayOf` says whether a link is up and how slow it is; `FindRoute` gives the fastest `Route`. |
+| `ModList`, `LoadOrder` | `Richter.Json/` | Find the mods in `Mods/`, read their `mod.json`s, put them in load order, and read every mod's copy of a file. |
+| `GameContent` | `Richter.Json/` | Merges every mod's copy of the scenario, its star system and `device-kinds.json` with `ContentMerge`, and builds the `World` through `StarSystemFile`, `DeviceKindsFile` and `ScenarioFile`. The records in `Documents/` are the file formats; `ContentErrors` words errors for players and modders. |
 | Tests | `Richter.Tests/` | xUnit v3 tests of mistakes that stay quiet at runtime, on Microsoft.Testing.Platform. |
 
 References point inward: `Richter` → `Richter.Vulkan`, `Richter.Json` and `Richter.Domain`, and
@@ -56,17 +57,19 @@ References point inward: `Richter` → `Richter.Vulkan`, `Richter.Json` and `Ric
 `MapScene` is all it knows of the game. File formats stay in `Richter.Json`, and
 `Richter.Domain` references nothing and uses no native packages. Things with identity (bodies,
 networks, devices, links) are classes and refer to each other by ID; values (orbits, rotations,
-locations) are records. Bodies only come from content, so a body's ID is the key its file gives
-it, such as `earth`. Networks, devices and links can be made during play, so `NetworkGraph`
-numbers them from one counter, in the order they're made.
+locations) are records. Bodies and device kinds only come from content, so their IDs are the
+keys content gives them, such as `earth` and `door`. Networks, devices and links can be made
+during play, so `NetworkGraph` numbers them from one counter, in the order they're made;
+networks and links from content also keep their content key.
 
 ## Start-up and shutdown
 
-1. `Program.Main` loads `solar-system.json` through `StarSystemFile`, then `scenario.json`
-   through `ScenarioFile`, which starts the `World` and adds its networks, devices and links
-   through `NetworkGraph`. It compiles the shaders that `WindowRenderer.ShaderFiles` lists
-   through `ShaderCompiler` and rasterises the font through `MapFont`, all before touching GLFW.
-   It reports every broken file and returns 1 without opening a window.
+1. `Program.Main` finds the mods through `ModList`. `GameContent` merges every mod's copy of
+   `scenarios/default.json`, the star system it names and `device-kinds.json`, and starts the
+   `World`, adding the networks, devices and links through `NetworkGraph`. `Program` compiles
+   the shaders that `WindowRenderer.ShaderFiles` lists through `ShaderCompiler` and rasterises
+   the font through `MapFont`, each from the last mod that has it, all before touching GLFW. It
+   reports every broken file and returns 1 without opening a window.
 2. It calls `GlfwSurfaceSource.ShareVulkanLoader`, then `Glfw.Init`.
 3. `Program.Run` creates the window with `ClientApi = GLFW_NO_API`, because Vulkan draws to
    it.
@@ -121,7 +124,7 @@ numbers them from one counter, in the order they're made.
 The accuracy is a game's: bodies are spheres with fixed poles and constant spin, and orbits are
 fixed ellipses that nothing disturbs. The planets are within about a degree of where they really
 are, and the Sun and the Moon's phases keep time for centuries. That's deliberate: there are no
-ephemeris files, precession or leap seconds. The start time comes from `scenario.json` and will
+ephemeris files, precession or leap seconds. The start time comes from the scenario and will
 change, so nothing may depend on the year.
 
 ## Background work
@@ -140,10 +143,13 @@ the main thread.
 - **Swapchain validity:** `WindowRenderer.DrawFrame` decides when to rebuild, and `Swapchain`
   rebuilds.
 - **Network rules:** `NetworkGraph` is the only way to add or remove networks, devices and
-  links: one gateway per network, added and removed with it; devices on networks in the graph;
+  links: one gateway per network, added and removed with it; devices of known kinds, on networks
+  in the graph;
   links between two different networks, at most one per pair for each medium; cables only on the
   ground of one body; networks on or around bodies in the star system.
 - **Star system shape:** the `StarSystem` constructor checks that the bodies form one tree.
+- **Mods:** `LoadOrder` decides the order and `ContentMerge` how copies of a file combine, as
+  [modding.md](modding.md) specifies.
 - **Data ranges:** the setters on `CelestialBody`, `Orbit`, `Rotation` and `SurfaceLocation`
   reject values outside their documented ranges, so bad content fails where it's loaded.
 - **Pointer safety:** the BRUTAL analysers (`BRUTALCORE0009`, `0010`, at error) check that
@@ -165,6 +171,9 @@ in `FreeTypeNative`. These are the ones that cross files.
 - **`MapFont` leaves three pixels between glyphs** because `text.frag` reads two pixels out
   from each glyph for its dark outline. Widen the outline and the padding must grow, or outlines
   pick up bits of the next glyph.
+- **Colours are linear.** The swapchain is sRGB, so the colours in `SystemMap`,
+  `WindowRenderer` and the shaders are converted for the screen: 0.5 shows at about 0.73. A
+  swapchain in a UNORM format would draw everything darker.
 - **Positions become `Single` only after the focus is subtracted.** Converting absolute positions
   would place things to about 16 km at Earth's distance, visibly wrong when zoomed in.
 - **The `Richter.Vulkan` namespace hides Brutal's `Vulkan` class.** Write
@@ -183,12 +192,16 @@ in `FreeTypeNative`. These are the ones that cross files.
 - **`solar-system.json`'s numbers are published values,** or arithmetic on them shown in a
   comment. A wrong position means a wrong conversion in code; editing a number breaks the link
   to its source.
-- **Content files are written by hand, by us and by modders.** Comments and trailing commas are
-  allowed; unknown properties are rejected, because they're usually typos. Times without an
-  offset are UTC, and only ISO 8601 dates are accepted. Renaming a property in a `*Document`
-  record breaks every file and mod that sets it. Optional lists are nullable, because the
-  generated reader sets a missing one to null over any default. `ContentErrors` matches .NET's
-  English messages, so a .NET update can change the wording of an error, but not hide one.
+- **Content files are written by hand, by us and by modders,** and [modding.md](modding.md) is
+  their specification. Comments and trailing commas are allowed; unknown properties are
+  rejected, because they're usually typos. Times without an offset are UTC, and only ISO 8601
+  dates are accepted. Renaming a property in a `*Document` record, or an id in `core`, breaks
+  every mod that uses it; once mods are published, such a change raises
+  `ModList.ContentFormat`. Optional lists are nullable, because the generated reader sets a
+  missing one to null over any default. `ContentErrors` matches .NET's English messages, so a
+  .NET update can change the wording of an error, but not hide one.
+- **Errors found after merging name the entry's file.** Merged entries are `FromFile` records,
+  which keep the path of the mod's file each came from; pass that on, not the scenario's path.
 - **The orbit tests pin conventions, not just numbers.** A flipped rotation still gives plausible
   orbits. `StarSystemTests` places things against a tilted pole, and `StarSystemFileTests`
   checks the real data against things anyone can look up, so a flip fails a test.

@@ -12,6 +12,12 @@ public class Link
 {
     public required LinkId Id { get; init; }
 
+    /// <summary>
+    /// The id content gave the link, such as <c>sydney-london</c>, which mods and saves refer to
+    /// it by. Null for a link made during play.
+    /// </summary>
+    public String? Key { get; init; }
+
     public required NetworkId NetworkA { get; init; }
 
     public required NetworkId NetworkB { get; init; }

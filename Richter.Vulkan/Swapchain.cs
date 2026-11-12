@@ -13,8 +13,11 @@ namespace Richter.Vulkan;
 /// on one after its frame's fence has signalled.
 /// </para>
 /// <para>
-/// The format is the first the surface lists, and the layers' pipelines are built for it. A
-/// rebuilt swapchain picks the same one, because the surface lists the same formats every time.
+/// The format is an 8-bit sRGB one wherever the surface offers one, which nearly every surface
+/// does. Shaders write linear colours and the hardware converts them for the screen, so colours
+/// look the same whichever format a platform happens to list first. The layers' pipelines are
+/// built for this format, and a rebuilt swapchain picks the same one, because the surface lists
+/// the same formats every time.
 /// </para>
 /// </remarks>
 internal class Swapchain : IDisposable
@@ -118,7 +121,11 @@ internal class Swapchain : IDisposable
 
         VkSurfaceFormatKHR[] surfaceFormats = new VkSurfaceFormatKHR[_physicalDevice.GetSurfaceFormatsKHR_Count(_surface)];
         _physicalDevice.GetSurfaceFormatsKHR_Write(_surface, surfaceFormats);
-        VkSurfaceFormatKHR surfaceFormat = surfaceFormats[0];
+        VkSurfaceFormatKHR surfaceFormat = surfaceFormats
+            .Where(format => format.ColorSpace == VkColorSpaceKHR.SRGBNonlinearKHR)
+            .Where(format => format.Format is VkFormat.B8G8R8A8SRGB or VkFormat.R8G8B8A8SRGB)
+            .DefaultIfEmpty(surfaceFormats[0])
+            .First();
 
         Handle = _device.CreateSwapchainKHR(
             new VkSwapchainCreateInfoKHR

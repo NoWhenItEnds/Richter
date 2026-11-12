@@ -10,7 +10,15 @@ namespace Richter.Tests.Networking;
 /// </summary>
 public class NetworkGraphTests
 {
-    private readonly NetworkGraph _graph = new NetworkGraph(TestBodies.CreateSolarSystem(TestBodies.CreateEarth()));
+    private static readonly DeviceKind GatewayKind = new DeviceKind { Id = new DeviceKindId("gateway"), Name = "Gateway" };
+    private static readonly DeviceKind DoorKind = new DeviceKind
+    {
+        Id = new DeviceKindId("door"),
+        Name = "Door",
+        Lock = new LockDefinition { StartsLocked = true },
+    };
+
+    private readonly NetworkGraph _graph = new NetworkGraph(TestBodies.CreateSolarSystem(TestBodies.CreateEarth()), [GatewayKind, DoorKind]);
 
     [Fact]
     public void RemovingANetworkRemovesItsDevicesAndLinksFromBothEnds()
@@ -18,8 +26,7 @@ public class NetworkGraphTests
         Network removed = AddNetwork(Sydney);
         Network neighbour = AddNetwork(Sydney);
         Network farther = AddNetwork(Sydney);
-        Door door = new Door { Id = _graph.NewDeviceId(), Name = "Door", Network = removed.Id, Locked = true };
-        _graph.AddDevice(door);
+        _graph.AddDevice(new Device(_graph.NewDeviceId(), DoorKind, "Door", removed.Id));
         _graph.AddLink(NewLink(removed.Id, neighbour.Id, LinkMedium.Cable));
         Link remaining = NewLink(neighbour.Id, farther.Id, LinkMedium.Cable);
         _graph.AddLink(remaining);
@@ -187,7 +194,7 @@ public class NetworkGraphTests
     private Network AddNetwork(Location location)
     {
         Network network = new Network { Id = _graph.NewNetworkId(), Name = "Network", Location = location };
-        _graph.AddNetwork(network, new Gateway { Id = _graph.NewDeviceId(), Name = "Gateway", Network = network.Id });
+        _graph.AddNetwork(network, new Device(_graph.NewDeviceId(), GatewayKind, "Gateway", network.Id));
         return network;
     }
 }

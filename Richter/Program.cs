@@ -3,7 +3,6 @@ using System.Globalization;
 using Brutal.GlfwApi;
 using Brutal.Numerics;
 using Richter.Domain;
-using Richter.Domain.Astronomy;
 using Richter.Json;
 using Richter.Vulkan;
 
@@ -12,11 +11,13 @@ namespace Richter;
 /// <summary> Entry point and bootstrapper for the Richter application. </summary>
 public class Program
 {
-    // Content files, relative to the executable, so that errors shown to players don't reveal
-    // where the game is installed.
-    private const String ScenarioPath = "Data/scenario.json";
-    private const String StarSystemPath = "Data/solar-system.json";
-    private const String FontPath = "Data/Fonts/LiberationSans-Regular.ttf";
+    /// <summary>
+    /// The scenario the game starts, in <c>scenarios/</c>. There's no menu to choose another yet,
+    /// but a mod can replace this one.
+    /// </summary>
+    private const String Scenario = "default";
+
+    private const String FontPath = "fonts/LiberationSans-Regular.ttf";
 
     /// <summary>
     /// Loads the game's content, starts GLFW, runs the game until its window closes, then shuts
@@ -24,14 +25,18 @@ public class Program
     /// </summary>
     public static async Task<Int32> Main()
     {
-        // Everything is loaded before anything is checked, so that every broken file is reported
-        // at once. Only the scenario waits: its networks are placed in the star system.
-        StarSystem? starSystem = await LoadAsync(StarSystemPath, StarSystemFile.ReadAsync, CancellationToken.None);
-        World? world = starSystem is null
-            ? null
-            : await LoadAsync(ScenarioPath, (stream, token) => ScenarioFile.ReadAsync(stream, starSystem, token), CancellationToken.None);
-        IReadOnlyDictionary<String, Byte[]>? shaders = await LoadShadersAsync(CancellationToken.None);
-        MapFont? font = await LoadAsync(FontPath, MapFont.ReadAsync, CancellationToken.None);
+        // Everything comes from the mods, so they're found first. Then everything is loaded
+        // before anything is checked, so that every broken file is reported at once.
+        ModList? mods = await LoadAsync(token => ModList.LoadAsync(AppContext.BaseDirectory, token), CancellationToken.None);
+
+        if (mods is null)
+        {
+            return 1;
+        }
+
+        World? world = await LoadAsync(token => GameContent.LoadWorldAsync(mods, Scenario, token), CancellationToken.None);
+        IReadOnlyDictionary<String, Byte[]>? shaders = await LoadShadersAsync(mods, CancellationToken.None);
+        MapFont? font = await LoadAsync(token => mods.ReadFileAsync(FontPath, MapFont.ReadAsync, token), CancellationToken.None);
 
         if (world is null || shaders is null || font is null)
         {
@@ -59,28 +64,24 @@ public class Program
     }
 
     /// <summary>
-    /// Reads a content file, given relative to the executable, or reports why it can't and
-    /// returns null.
+    /// Loads some of the game's content, or reports why it can't and returns null. The loaders'
+    /// messages name the file, relative to the game's directory, so that errors shown to players
+    /// don't reveal where the game is installed.
     /// </summary>
-    private static async Task<T?> LoadAsync<T>(String path, Func<Stream, CancellationToken, Task<T>> readAsync, CancellationToken cancellationToken)
+    private static async Task<T?> LoadAsync<T>(Func<CancellationToken, Task<T>> loadAsync, CancellationToken cancellationToken)
         where T : class
     {
         T? content = null;
 
-        // Players and modders edit these files, so say what's wrong instead of crashing with a
-        // stack trace.
+        // Players and modders edit content, so say what's wrong instead of crashing with a stack
+        // trace.
         try
         {
-            await using FileStream file = File.OpenRead(Path.Combine(AppContext.BaseDirectory, path));
-            content = await readAsync(file, cancellationToken);
-        }
-        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
-        {
-            await Console.Error.WriteLineAsync($"Richter can't start: {path} is missing.");
+            content = await loadAsync(cancellationToken);
         }
         catch (InvalidDataException exception)
         {
-            await Console.Error.WriteLineAsync($"Richter can't start: {path} isn't valid. {exception.Message}");
+            await Console.Error.WriteLineAsync($"Richter can't start: {exception.Message}");
         }
 
         return content;
@@ -90,15 +91,14 @@ public class Program
     /// Reads and compiles every shader the renderer draws with, by file name. Reports each one
     /// that can't be read or compiled, and returns null if any couldn't.
     /// </summary>
-    private static async Task<IReadOnlyDictionary<String, Byte[]>?> LoadShadersAsync(CancellationToken cancellationToken)
+    private static async Task<IReadOnlyDictionary<String, Byte[]>?> LoadShadersAsync(ModList mods, CancellationToken cancellationToken)
     {
         Dictionary<String, Byte[]> shaders = new Dictionary<String, Byte[]>();
 
         foreach (String fileName in WindowRenderer.ShaderFiles)
         {
             Byte[]? spirv = await LoadAsync(
-                $"Data/Shaders/{fileName}",
-                (stream, token) => ShaderCompiler.CompileAsync(stream, fileName, token),
+                token => mods.ReadFileAsync($"shaders/{fileName}", (stream, readToken) => ShaderCompiler.CompileAsync(stream, fileName, readToken), token),
                 cancellationToken);
 
             if (spirv is not null)

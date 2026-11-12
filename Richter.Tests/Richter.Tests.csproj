@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <!-- The game's real Solar System data, embedded so tests read it without touching the disk. -->
-    <EmbeddedResource Include="..\Richter\Data\solar-system.json" LogicalName="solar-system.json" />
+    <EmbeddedResource Include="..\Richter\Mods\core\star-systems\solar-system.json" LogicalName="solar-system.json" />
   </ItemGroup>
 
 </Project>

@@ -4,8 +4,8 @@ namespace Richter.Json.Documents;
 internal record NetworkDocument
 {
     /// <summary>
-    /// A short name, unique in the file, that links use to refer to the network. It isn't kept
-    /// once the file is read.
+    /// Unique in the scenario. Links and later mods refer to the network by it, and it's kept as
+    /// the network's <c>Key</c>.
     /// </summary>
     public required String Id { get; init; }
 
@@ -20,8 +20,11 @@ internal record NetworkDocument
     /// </summary>
     public OrbitDocument? Orbit { get; init; }
 
-    /// <summary> The gateway's name. Left out, it's the network's name followed by "gateway". </summary>
-    public String? Gateway { get; init; }
+    /// <summary>
+    /// The device that every link to or from the network passes through. Left out, it's of kind
+    /// <c>gateway</c>, named after the network.
+    /// </summary>
+    public DeviceDocument? Gateway { get; init; }
 
     // Nullable rather than defaulting to empty: the generated reader sets a missing init
     // property to null, over any default.

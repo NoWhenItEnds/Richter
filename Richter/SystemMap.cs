@@ -27,6 +27,8 @@ internal class SystemMap
     private const Single NetworkRadius = 2;
     private const Single LabelGap = 5;
 
+    // Linear colours: the swapchain's sRGB format converts them for the screen, so 0.5 shows
+    // brighter than half way.
     private static readonly float4 StarColour = new float4(1.0f, 0.85f, 0.4f, 1.0f);
     private static readonly float4 BodyColour = new float4(0.75f, 0.8f, 0.9f, 1.0f);
     private static readonly float4 OrbitColour = new float4(0.35f, 0.4f, 0.5f, 1.0f);

@@ -18,6 +18,9 @@ for working notes specific to this repository.
 ## This repository
 
 - Notes about one developer's machine go in `CLAUDE.local.md`, which git ignores, not here.
+- `.githooks/pre-commit` runs the "Before a change is done" checks, in about 15 seconds. It's on
+  when `git config core.hooksPath` is `.githooks`. Don't skip it with `--no-verify`; if it fails,
+  fix the cause.
 - `global.json` runs `dotnet test` on Microsoft.Testing.Platform, which xUnit v3 4.x needs on
   the .NET 10 SDK. VSTest options such as `--blame` don't apply.
 - Tests are only for mistakes that stay quiet while the game runs: orbital mechanics and
@@ -28,10 +31,13 @@ for working notes specific to this repository.
 - Design from game-industry practice for whatever is being built, not from other repos: this
   overrides any instruction to follow the closest sibling implementation. Patterns already in
   Richter still apply. Say which practice a design follows.
-- Game content lives in human-editable files in `Richter/Data/`, read by `Richter.Json`, because
-  Richter may support player mods. There is no saving yet; when it comes, it belongs in
-  `Richter.Json` too. A first version was removed on 11/11/2026.
-- The start time (2112 in `scenario.json` for now) will change. Nothing may depend on the year:
+- All game content comes from mods, read by `Richter.Json`, so that players can change
+  anything the game sets up. The game's own content is the mod `core`, in `Richter/Mods/core/`.
+  `docs/modding.md` specifies the format: read it before changing content or `Richter.Json`,
+  and update it in the same change. New content should be data that later mods can merge, with
+  ids. There is no saving yet; when it comes, it belongs in `Richter.Json` too, and refers to
+  content by its keys. A first version was removed on 11/11/2026.
+- The start time (2112 in `scenarios/default.json` for now) will change. Nothing may depend on the year:
   choose models and data that hold for centuries either side, and spread test dates across that
   range rather than using only 2112.
 - Astronomy is at a game's accuracy (see `docs/architecture.md`). Don't add ephemeris files

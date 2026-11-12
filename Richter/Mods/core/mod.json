@@ -1,0 +1,8 @@
+// The game's own content. It's a mod like any other, loaded first, so every other mod can add
+// to it or replace parts of it. See docs/modding.md.
+{
+  "id": "core",
+  "name": "Richter",
+  "version": "0.1.0",
+  "contentFormat": 1
+}

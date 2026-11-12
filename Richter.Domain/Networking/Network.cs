@@ -5,11 +5,17 @@ namespace Richter.Domain.Networking;
 /// <summary> A group of devices in one place, which reaches other networks through links. </summary>
 /// <remarks>
 /// A network doesn't list its devices or links: <see cref="NetworkGraph"/> keeps those, and is
-/// the only way to add a network, together with its <see cref="Gateway"/>.
+/// the only way to add a network, together with its gateway.
 /// </remarks>
 public class Network
 {
     public required NetworkId Id { get; init; }
+
+    /// <summary>
+    /// The id content gave the network, such as <c>sydney</c>, which mods and saves refer to it
+    /// by. Null for a network made during play.
+    /// </summary>
+    public String? Key { get; init; }
 
     public required String Name { get; init; }
 

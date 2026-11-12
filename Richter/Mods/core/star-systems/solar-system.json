@@ -19,7 +19,8 @@
 //   2009 one for Earth and the Moon), against Earth's J2000 equator. Only the fixed pole and the
 //   steady spin are used, without the pole's slow drift or the periodic terms.
 //
-// Each body's id is the name that orbits here, and networks in scenario.json, refer to it by.
+// Each body's id is the name that orbits here, and networks in scenarios, refer to it by. A mod's
+// copy of this file adds bodies or replaces them by id; see docs/modding.md.
 // An orbit's plane is "reference" when its angles are against the ecliptic, and "parentEquator"
 // when they're against the parent's equator, as satellite orbits are. An orbit gives either a
 // period or a semiMajorAxis; with a period, the size comes from the parent's GM, which keeps the

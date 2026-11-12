@@ -1,12 +1,16 @@
-// The game's starting scenario.
+// The scenario the game starts.
 //
-// startTime is an ISO 8601 date and time; one without an offset is UTC. Distances are in km and
-// angles in degrees. A network sits on or above a body ("surface", which turns with the body) or
-// on a satellite ("orbit", its elements as at startTime), naming the body by its id in
-// solar-system.json. Its devices are workstations, cameras and doors, and every network also
-// gets a gateway. Links join two networks by id, over a cable (between two networks on the
-// ground of one body), radio or laser.
+// starSystem names a file in star-systems/. startTime is an ISO 8601 date and time; one without
+// an offset is UTC. Distances are in km and angles in degrees. A network sits on or above a body
+// ("surface", which turns with the body) or on a satellite ("orbit", its elements as at
+// startTime), naming the body by its id. Its devices are of the kinds in device-kinds.json, and
+// every network also gets a gateway. Links join two networks by id, over a cable (between two
+// networks on the ground of one body), radio or laser.
+//
+// Networks and links have ids so that a mod's copy of this file can replace them or link to
+// them. See docs/modding.md.
 {
+  "starSystem": "solar-system",
   "startTime": "2112-01-01T00:00:00Z",
 
   "networks": [
@@ -17,7 +21,7 @@
       "devices": [
         { "kind": "workstation", "name": "Operator desk" },
         { "kind": "camera", "name": "Roof camera" },
-        { "kind": "door", "name": "Front door", "locked": true }
+        { "kind": "door", "name": "Front door" }
       ]
     },
     {
@@ -26,7 +30,7 @@
       "surface": { "body": "earth", "latitude": 51.51, "longitude": -0.13, "altitude": 0.02 },
       "devices": [
         { "kind": "workstation", "name": "Reception" },
-        { "kind": "door", "name": "Server room", "locked": true }
+        { "kind": "door", "name": "Server room" }
       ]
     },
     {
@@ -66,7 +70,7 @@
       "surface": { "body": "mars", "latitude": 18.445, "longitude": 77.451, "altitude": 0 },
       "devices": [
         { "kind": "workstation", "name": "Lab terminal" },
-        { "kind": "door", "name": "Airlock", "locked": true }
+        { "kind": "door", "name": "Airlock" }
       ]
     },
     {
@@ -78,12 +82,12 @@
   ],
 
   "links": [
-    { "between": ["sydney", "london"], "medium": "cable" },
-    { "between": ["sydney", "pacific-relay"], "medium": "radio" },
-    { "between": ["london", "low-relay"], "medium": "radio" },
-    { "between": ["pacific-relay", "low-relay"], "medium": "laser" },
-    { "between": ["pacific-relay", "tranquility"], "medium": "radio" },
-    { "between": ["sydney", "mars-relay"], "medium": "radio" },
-    { "between": ["mars-relay", "jezero"], "medium": "radio" }
+    { "id": "sydney-london", "between": ["sydney", "london"], "medium": "cable" },
+    { "id": "sydney-pacific", "between": ["sydney", "pacific-relay"], "medium": "radio" },
+    { "id": "london-low", "between": ["london", "low-relay"], "medium": "radio" },
+    { "id": "pacific-low", "between": ["pacific-relay", "low-relay"], "medium": "laser" },
+    { "id": "pacific-tranquility", "between": ["pacific-relay", "tranquility"], "medium": "radio" },
+    { "id": "sydney-mars", "between": ["sydney", "mars-relay"], "medium": "radio" },
+    { "id": "mars-jezero", "between": ["mars-relay", "jezero"], "medium": "radio" }
   ]
 }

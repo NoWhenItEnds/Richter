@@ -9,8 +9,8 @@ namespace Richter.Domain.Networking;
 /// <remarks>
 /// <para>
 /// Every rule about how they fit together is checked here: each network has exactly one
-/// gateway, every device is on a network in the graph, a link joins two different networks in
-/// the graph, no two links of the same medium join the same pair, a cable joins only networks on
+/// gateway, every device is of a kind the graph knows and on a network in the graph, a link
+/// joins two different networks in the graph, no two links of the same medium join the same pair, a cable joins only networks on
 /// the ground of the same body, and every network is on or around a body in the star system. The
 /// graph also keeps each network's devices and links. Entities refer to each other only by ID, so
 /// nothing can change those connections without going through the graph.
@@ -29,19 +29,31 @@ namespace Richter.Domain.Networking;
 public class NetworkGraph
 {
     private readonly StarSystem _starSystem;
+    private readonly Dictionary<DeviceKindId, DeviceKind> _deviceKinds = new Dictionary<DeviceKindId, DeviceKind>();
     private readonly Dictionary<NetworkId, Network> _networks = new Dictionary<NetworkId, Network>();
     private readonly Dictionary<DeviceId, Device> _devices = new Dictionary<DeviceId, Device>();
     private readonly Dictionary<LinkId, Link> _links = new Dictionary<LinkId, Link>();
-    private readonly Dictionary<NetworkId, Gateway> _gateways = new Dictionary<NetworkId, Gateway>();
+    private readonly Dictionary<NetworkId, Device> _gateways = new Dictionary<NetworkId, Device>();
     private readonly Dictionary<NetworkId, HashSet<Device>> _devicesByNetwork = new Dictionary<NetworkId, HashSet<Device>>();
     private readonly Dictionary<NetworkId, HashSet<Link>> _linksByNetwork = new Dictionary<NetworkId, HashSet<Link>>();
     private Int32 _lastId;
 
     /// <param name="starSystem"> The bodies that networks are placed on or around. </param>
-    public NetworkGraph(StarSystem starSystem)
+    /// <param name="deviceKinds"> Every kind of device there can be. </param>
+    public NetworkGraph(StarSystem starSystem, IEnumerable<DeviceKind> deviceKinds)
     {
         _starSystem = starSystem;
+
+        foreach (DeviceKind kind in deviceKinds)
+        {
+            if (!_deviceKinds.TryAdd(kind.Id, kind))
+            {
+                throw new ArgumentException($"Two device kinds have the id \"{kind.Id.Key}\".", nameof(deviceKinds));
+            }
+        }
     }
+
+    public IReadOnlyCollection<DeviceKind> DeviceKinds => _deviceKinds.Values;
 
     public IReadOnlyCollection<Network> Networks => _networks.Values;
 
@@ -50,12 +62,18 @@ public class NetworkGraph
 
     public IReadOnlyCollection<Link> Links => _links.Values;
 
+    public DeviceKind GetDeviceKind(DeviceKindId id)
+    {
+        return _deviceKinds[id];
+    }
+
     public Network GetNetwork(NetworkId id)
     {
         return _networks[id];
     }
 
-    public Gateway GetGateway(NetworkId network)
+    /// <summary> The device that every link to or from the network passes through. </summary>
+    public Device GetGateway(NetworkId network)
     {
         return _gateways[network];
     }
@@ -96,8 +114,11 @@ public class NetworkGraph
         return new LinkId(_lastId);
     }
 
-    /// <summary> Adds a network together with its gateway, since every network has exactly one. </summary>
-    public void AddNetwork(Network network, Gateway gateway)
+    /// <summary>
+    /// Adds a network together with its gateway, the device that every link to or from the
+    /// network passes through, since every network has exactly one.
+    /// </summary>
+    public void AddNetwork(Network network, Device gateway)
     {
         if (_networks.ContainsKey(network.Id))
         {
@@ -120,6 +141,11 @@ public class NetworkGraph
             throw new ArgumentException($"Device {gateway.Id.Value} is already in the graph.", nameof(gateway));
         }
 
+        if (!_deviceKinds.ContainsKey(gateway.Kind))
+        {
+            throw new ArgumentException($"Gateway {gateway.Name} is of kind \"{gateway.Kind.Key}\", which isn't defined.", nameof(gateway));
+        }
+
         _networks.Add(network.Id, network);
         _gateways.Add(network.Id, gateway);
         _devices.Add(gateway.Id, gateway);
@@ -128,16 +154,11 @@ public class NetworkGraph
     }
 
     /// <summary>
-    /// Adds a device to a network already in the graph. A gateway can't be added this way; it
+    /// Adds a device, other than its gateway, to a network already in the graph. The gateway
     /// comes with its network through <see cref="AddNetwork"/>.
     /// </summary>
     public void AddDevice(Device device)
     {
-        if (device is Gateway)
-        {
-            throw new ArgumentException($"Gateway {device.Name} can only be added with its network.", nameof(device));
-        }
-
         if (_devices.ContainsKey(device.Id))
         {
             throw new ArgumentException($"Device {device.Id.Value} is already in the graph.", nameof(device));
@@ -146,6 +167,11 @@ public class NetworkGraph
         if (!_networks.ContainsKey(device.Network))
         {
             throw new ArgumentException($"Device {device.Name} is on network {device.Network.Value}, which isn't in the graph.", nameof(device));
+        }
+
+        if (!_deviceKinds.ContainsKey(device.Kind))
+        {
+            throw new ArgumentException($"Device {device.Name} is of kind \"{device.Kind.Key}\", which isn't defined.", nameof(device));
         }
 
         _devices.Add(device.Id, device);
@@ -227,7 +253,7 @@ public class NetworkGraph
             throw new KeyNotFoundException($"Device {id.Value} isn't in the graph.");
         }
 
-        if (device is Gateway)
+        if (_gateways[device.Network] == device)
         {
             throw new ArgumentException($"Gateway {device.Name} can only be removed with its network.", nameof(id));
         }

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs the checks in docs/dotnet-standards.md ("Before a change is done") before each commit.
+# Turn it on once in each clone with: git config core.hooksPath .githooks
+#
+# It checks the working tree, not only what's staged, so unstaged changes can fail a commit.
+set -e
+
+echo "pre-commit: building, with warnings as errors"
+# From scratch, because an incremental build skips unchanged projects and so doesn't repeat
+# their warnings.
+dotnet build --no-incremental -warnaserror -nologo -v q
+
+echo "pre-commit: checking style and whitespace"
+dotnet format style --severity warn --verify-no-changes
+dotnet format whitespace --verify-no-changes
+
+echo "pre-commit: testing"
+dotnet test --no-build
