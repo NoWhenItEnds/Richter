@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- xUnit v3 test projects are executables: each one hosts its own test runner. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Richter.Domain\Richter.Domain.csproj" />
+    <ProjectReference Include="..\Richter.Json\Richter.Json.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The game's real Solar System data, embedded so tests read it without touching the disk. -->
+    <EmbeddedResource Include="..\Richter\Data\solar-system.json" LogicalName="solar-system.json" />
+  </ItemGroup>
+
+</Project>

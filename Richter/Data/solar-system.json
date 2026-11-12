@@ -1,0 +1,202 @@
+// The real Solar System at a game's accuracy. Every number is a published value, or simple
+// arithmetic on published values, shown in the comment beside it. If a position comes out wrong,
+// fix the conversion in code rather than a number here.
+//
+// Units: distances in km, GM in km³/s², angles in degrees, periods in days, and spin rates in
+// degrees per day. Every element describes the epoch below.
+//
+// Sources:
+// - gravitationalParameter: JPL's DE440 values, from NAIF's gm_de440.tpc.
+// - radius: mean radii from JPL's planetary and satellite physical parameters, and the IAU's
+//   nominal radius for the Sun.
+// - Planet orbits: Table 2a of JPL's "Approximate Positions of the Planets" (Standish), against
+//   the J2000 ecliptic. The argument of periapsis is long.peri - long.node, the mean anomaly is
+//   L - long.peri, and the period is 360° over L's rate: 36525 × 360 / rate. Table 2a's other
+//   rates, and Table 2b's extra terms for Jupiter to Neptune, are left out, which can put those
+//   planets about a degree out.
+// - The Moon's orbit: JPL's mean elements for the Moon, against the ecliptic.
+// - spin: the IAU's rotation elements as NAIF's pck00011.tpc gives them (the 2015 report, and the
+//   2009 one for Earth and the Moon), against Earth's J2000 equator. Only the fixed pole and the
+//   steady spin are used, without the pole's slow drift or the periodic terms.
+//
+// Each body's id is the name that orbits here, and networks in scenario.json, refer to it by.
+// An orbit's plane is "reference" when its angles are against the ecliptic, and "parentEquator"
+// when they're against the parent's equator, as satellite orbits are. An orbit gives either a
+// period or a semiMajorAxis; with a period, the size comes from the parent's GM, which keeps the
+// body in time with the real one.
+{
+  // J2000. The sources mean 12:00 TDB, about a minute later, well within a game's accuracy.
+  "epoch": "2000-01-01T12:00:00Z",
+
+  // The ecliptic's tilt to Earth's J2000 equator: 84381.448″, which JPL's ecliptic frame uses.
+  // It turns the IAU's spin elements onto the ecliptic.
+  "referencePlaneTilt": 23.4392911,
+
+  "bodies": [
+    {
+      "id": "sun",
+      "name": "Sun",
+      "gravitationalParameter": 1.3271244004127942e11,
+      "radius": 695700,
+      "spin": { "poleRightAscension": 286.13, "poleDeclination": 63.87, "primeMeridian": 84.176, "degreesPerDay": 14.1844 }
+    },
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "gravitationalParameter": 2.2031868551400003e4,
+      "radius": 2439.4,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 87.9692559979, // 36525 × 360 / 149472.67486623
+        "eccentricity": 0.20563661,
+        "inclination": 7.00559432,
+        "longitudeOfAscendingNode": 48.33961819,
+        "argumentOfPeriapsis": 29.11810076, // 77.45771895 - 48.33961819
+        "meanAnomaly": 174.79394829 // 252.25166724 - 77.45771895
+      },
+      "spin": { "poleRightAscension": 281.0103, "poleDeclination": 61.4155, "primeMeridian": 329.5988, "degreesPerDay": 6.1385108 }
+    },
+    {
+      "id": "venus",
+      "name": "Venus",
+      "gravitationalParameter": 3.24858592e5,
+      "radius": 6051.8,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 224.7008003391, // 36525 × 360 / 58517.81560260
+        "eccentricity": 0.00676399,
+        "inclination": 3.39777545,
+        "longitudeOfAscendingNode": 76.67261496,
+        "argumentOfPeriapsis": 55.09494217, // 131.76755713 - 76.67261496
+        "meanAnomaly": 50.21215137 // 181.97970850 - 131.76755713
+      },
+      "spin": { "poleRightAscension": 272.76, "poleDeclination": 67.16, "primeMeridian": 160.20, "degreesPerDay": -1.4813688 }
+    },
+    {
+      "id": "earth",
+      "name": "Earth",
+      "gravitationalParameter": 3.9860043550702266e5,
+      "radius": 6371.0084,
+      // Table 2a's orbit is the Earth-Moon barycentre's, about 4700 km from Earth's centre. It
+      // gives an inclination of -0.00054346 with the node at -5.11260389, which is the same orbit
+      // as the positive inclination with the node 180° round.
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 365.2563609061, // 36525 × 360 / 35999.37306329
+        "eccentricity": 0.01673163,
+        "inclination": 0.00054346,
+        "longitudeOfAscendingNode": 174.88739611, // -5.11260389 + 180
+        "argumentOfPeriapsis": -71.95733726, // 102.93005885 - 174.88739611
+        "meanAnomaly": -2.46314313 // 100.46691572 - 102.93005885
+      },
+      "spin": { "poleRightAscension": 0, "poleDeclination": 90, "primeMeridian": 190.147, "degreesPerDay": 360.9856235 }
+    },
+    {
+      "id": "moon",
+      "name": "Moon",
+      "gravitationalParameter": 4.9028001184575496e3,
+      "radius": 1737.4,
+      "orbit": {
+        "parent": "earth",
+        "plane": "reference",
+        // 360 / 13.17635815, the IAU spin rate: the Moon turns once per orbit. JPL's own period,
+        // 27.322, is the same rounded.
+        "period": 27.3216617142,
+        "eccentricity": 0.0554,
+        "inclination": 5.16,
+        "longitudeOfAscendingNode": 125.08,
+        "argumentOfPeriapsis": 318.15,
+        "meanAnomaly": 135.27
+      },
+      "spin": { "poleRightAscension": 269.9949, "poleDeclination": 66.5392, "primeMeridian": 38.3213, "degreesPerDay": 13.17635815 }
+    },
+    {
+      "id": "mars",
+      "name": "Mars",
+      "gravitationalParameter": 4.282837362069909e4,
+      "radius": 3389.5,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 686.9798515038, // 36525 × 360 / 19140.29934243
+        "eccentricity": 0.09336511,
+        "inclination": 1.85181869,
+        "longitudeOfAscendingNode": 49.71320984,
+        "argumentOfPeriapsis": -73.63065768, // -23.91744784 - 49.71320984
+        "meanAnomaly": 19.34931620 // -4.56813164 - -23.91744784
+      },
+      "spin": { "poleRightAscension": 317.269202, "poleDeclination": 54.432516, "primeMeridian": 176.049863, "degreesPerDay": 350.891982443297 }
+    },
+    {
+      "id": "jupiter",
+      "name": "Jupiter",
+      "gravitationalParameter": 1.266865319003704e8,
+      "radius": 69911,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 4332.5921425040, // 36525 × 360 / 3034.90371757
+        "eccentricity": 0.04853590,
+        "inclination": 1.29861416,
+        "longitudeOfAscendingNode": 100.29282654,
+        "argumentOfPeriapsis": -86.01787410, // 14.27495244 - 100.29282654
+        "meanAnomaly": 20.05983908 // 34.33479152 - 14.27495244
+      },
+      "spin": { "poleRightAscension": 268.056595, "poleDeclination": 64.495303, "primeMeridian": 284.95, "degreesPerDay": 870.5360000 }
+    },
+    {
+      "id": "saturn",
+      "name": "Saturn",
+      "gravitationalParameter": 3.793120623436167e7,
+      "radius": 58232,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 10759.2170684889, // 36525 × 360 / 1222.11494724
+        "eccentricity": 0.05550825,
+        "inclination": 2.49424102,
+        "longitudeOfAscendingNode": 113.63998702,
+        "argumentOfPeriapsis": -20.77862639, // 92.86136063 - 113.63998702
+        "meanAnomaly": -42.78564734 // 50.07571329 - 92.86136063
+      },
+      "spin": { "poleRightAscension": 40.589, "poleDeclination": 83.537, "primeMeridian": 38.90, "degreesPerDay": 810.7939024 }
+    },
+    {
+      "id": "uranus",
+      "name": "Uranus",
+      "gravitationalParameter": 5.793951256527211e6,
+      "radius": 25362,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 30686.4634010664, // 36525 × 360 / 428.49512595
+        "eccentricity": 0.04685740,
+        "inclination": 0.77298127,
+        "longitudeOfAscendingNode": 73.96250215,
+        "argumentOfPeriapsis": 98.47154226, // 172.43404441 - 73.96250215
+        "meanAnomaly": 141.76872184 // 314.20276625 - 172.43404441
+      },
+      "spin": { "poleRightAscension": 257.311, "poleDeclination": -15.175, "primeMeridian": 203.81, "degreesPerDay": -501.1600928 }
+    },
+    {
+      "id": "neptune",
+      "name": "Neptune",
+      "gravitationalParameter": 6.835103145462294e6,
+      "radius": 24622,
+      "orbit": {
+        "parent": "sun",
+        "plane": "reference",
+        "period": 60188.0886311130, // 36525 × 360 / 218.46515314
+        "eccentricity": 0.00895439,
+        "inclination": 1.77005520,
+        "longitudeOfAscendingNode": 131.78635853,
+        "argumentOfPeriapsis": -85.10477129, // 46.68158724 - 131.78635853
+        "meanAnomaly": 257.54130563 // 304.22289287 - 46.68158724
+      },
+      "spin": { "poleRightAscension": 299.36, "poleDeclination": 43.46, "primeMeridian": 249.978, "degreesPerDay": 541.1397757 }
+    }
+  ]
+}

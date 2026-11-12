@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Referenced directly for its analysers, which don't flow through other packages. They
+         check that pointers handed to Brutal come from fixed memory. -->
+    <PackageReference Include="Ahwoo.BRUTAL.Core" Version="2026.10.4" />
+    <PackageReference Include="Ahwoo.BRUTAL.FreeType" Version="2026.10.2" />
+    <PackageReference Include="Ahwoo.BRUTAL.ShaderC" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Abstractions" Version="2026.10.3" />
+    <PackageReference Include="Ahwoo.BRUTAL.Vulkan.Vma" Version="2026.10.3" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+<Project>
+  <!-- Applies to every project under this directory. Shared unchanged by every repo that uses
+       docs/dotnet-standards.md; merge these properties into a repo's existing file rather
+       than replacing it. -->
+  <PropertyGroup>
+    <!-- Writes packages.lock.json on restore, so every restore resolves the same versions,
+         transitive ones included. Commit them with every package change. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Reports the .editorconfig rules during `dotnet build`, so the IDE, the build and
+         Claude Code all see what the format check fails on. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- IDE0005 (unused usings) is only reported at build with this on, and
+         the compiler checks that XML doc crefs resolve (CS1574). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 (undocumented public member) is off: the standards ask for docs
+         that say something the code doesn't, and this warning would demand
+         boilerplate on every public member instead. Review checks the rule. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

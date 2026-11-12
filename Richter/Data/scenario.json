@@ -1,0 +1,89 @@
+// The game's starting scenario.
+//
+// startTime is an ISO 8601 date and time; one without an offset is UTC. Distances are in km and
+// angles in degrees. A network sits on or above a body ("surface", which turns with the body) or
+// on a satellite ("orbit", its elements as at startTime), naming the body by its id in
+// solar-system.json. Its devices are workstations, cameras and doors, and every network also
+// gets a gateway. Links join two networks by id, over a cable (between two networks on the
+// ground of one body), radio or laser.
+{
+  "startTime": "2112-01-01T00:00:00Z",
+
+  "networks": [
+    {
+      "id": "sydney",
+      "name": "Sydney station",
+      "surface": { "body": "earth", "latitude": -33.87, "longitude": 151.21, "altitude": 0.05 },
+      "devices": [
+        { "kind": "workstation", "name": "Operator desk" },
+        { "kind": "camera", "name": "Roof camera" },
+        { "kind": "door", "name": "Front door", "locked": true }
+      ]
+    },
+    {
+      "id": "london",
+      "name": "London office",
+      "surface": { "body": "earth", "latitude": 51.51, "longitude": -0.13, "altitude": 0.02 },
+      "devices": [
+        { "kind": "workstation", "name": "Reception" },
+        { "kind": "door", "name": "Server room", "locked": true }
+      ]
+    },
+    {
+      // Geostationary over the Pacific: 42,164 km from Earth's centre, turning with it.
+      "id": "pacific-relay",
+      "name": "Pacific relay",
+      "surface": { "body": "earth", "latitude": 0, "longitude": 160, "altitude": 35793 }
+    },
+    {
+      // About 550 km up, crossing the equator at 53°, like many communication satellites.
+      "id": "low-relay",
+      "name": "Low relay",
+      "orbit": {
+        "parent": "earth",
+        "plane": "parentEquator",
+        "semiMajorAxis": 6921,
+        "eccentricity": 0,
+        "inclination": 53,
+        "longitudeOfAscendingNode": 0,
+        "argumentOfPeriapsis": 0,
+        "meanAnomaly": 0
+      }
+    },
+    {
+      // Tranquility Base, where Apollo 11 landed.
+      "id": "tranquility",
+      "name": "Tranquility Base",
+      "surface": { "body": "moon", "latitude": 0.674, "longitude": 23.473, "altitude": 0 },
+      "devices": [
+        { "kind": "camera", "name": "Landing site camera" }
+      ]
+    },
+    {
+      // Jezero crater, where Perseverance landed.
+      "id": "jezero",
+      "name": "Jezero base",
+      "surface": { "body": "mars", "latitude": 18.445, "longitude": 77.451, "altitude": 0 },
+      "devices": [
+        { "kind": "workstation", "name": "Lab terminal" },
+        { "kind": "door", "name": "Airlock", "locked": true }
+      ]
+    },
+    {
+      // Areostationary, Mars's geostationary: 20,428 km from its centre, over Jezero's longitude.
+      "id": "mars-relay",
+      "name": "Mars relay",
+      "surface": { "body": "mars", "latitude": 0, "longitude": 77.451, "altitude": 17038.5 }
+    }
+  ],
+
+  "links": [
+    { "between": ["sydney", "london"], "medium": "cable" },
+    { "between": ["sydney", "pacific-relay"], "medium": "radio" },
+    { "between": ["london", "low-relay"], "medium": "radio" },
+    { "between": ["pacific-relay", "low-relay"], "medium": "laser" },
+    { "between": ["pacific-relay", "tranquility"], "medium": "radio" },
+    { "between": ["sydney", "mars-relay"], "medium": "radio" },
+    { "between": ["mars-relay", "jezero"], "medium": "radio" }
+  ]
+}

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Richter.Domain/Richter.Domain.csproj" />
+  <Project Path="Richter.Json/Richter.Json.csproj" />
+  <Project Path="Richter.Tests/Richter.Tests.csproj" />
+  <Project Path="Richter.Vulkan/Richter.Vulkan.csproj" />
+  <Project Path="Richter/Richter.csproj" />
+</Solution>

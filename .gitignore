@@ -1,0 +1,22 @@
+# Build output, including test results, which Microsoft.Testing.Platform writes under bin.
+bin/
+obj/
+
+# IDE state. VS Code's shared settings stay in the repo; everything else in .vscode is personal.
+.vs/
+.idea/
+*.user
+*.suo
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Claude Code notes and settings for one person's machine.
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Operating system clutter.
+.DS_Store
+Thumbs.db
